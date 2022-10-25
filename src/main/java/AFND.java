@@ -32,20 +32,21 @@ public class AFND {
     private ArrayList<JsonNode> rejeitado = new ArrayList<>();
 
     private Map<String, List<JsonNode>> resultados = new HashMap<>();
-    
+
     private String nome_afd;
 
     /**
      * Construtor sem parâmetro.
+     *
      * @param nome_afd
      */
     public AFND(String nome_afd) {
         System.out.println("Inicializando AFND");
         this.nome_afd = nome_afd;
-        getDadosJSON();        
+        getDadosJSON();
         setEstadoInicial();
         setEstadoFinal();
-        getTabelaTransicao();
+        setTabelaTransicaoEstados();
     }
 
     private void getDadosJSON() {
@@ -58,7 +59,7 @@ public class AFND {
             throw new RuntimeException(e);
         }
     }
-    
+
     /**
      * Define o estado inicial.
      */
@@ -91,22 +92,23 @@ public class AFND {
         System.out.println("Recuperando o alfabeto");
         return afndDados.get("alfabeto");
     }
-    
+
     /**
-     * Recupera a tabela de transição.
+     * Recupera a tabela de transição para um estado e entrada.
      *
      * @param nome
+     * @param entrada
      * @return
      */
-    private JsonNode getTabelaTransicao(String nome) {
-        System.out.println("Recuperando matriz transicao");
-        return afndDados.get("matriz").get(nome);
+    private JsonNode getTabelaTransicaoEstadoEntrada(String nome, String entrada) {
+        //System.out.println("Recuperando matriz transicao para o estado e entrada");
+        return matriz.get(nome).get(entrada);
     }
 
     /**
      * Carrega os transições de estado.
      */
-    private void getTabelaTransicao() {
+    private void setTabelaTransicaoEstados() {
         System.out.println("Recuperando a matriz de transicao");
         matriz = afndDados.get("matriz");
     }
@@ -123,25 +125,28 @@ public class AFND {
             for (JsonNode entrada : listaEntrada) {
                 List<String> listaTransicoes = new ArrayList<>();
                 lista.forEach(estado -> {
-                    JsonNode transicoes = matriz.get(estado).get(entrada.asText());
-                  
-                    if (transicoes != null) {
-                        transicoes.forEach(estadoTransicao -> {
-                            listaTransicoes.add(estadoTransicao.asText());
-                        });
+                    if (matriz.get(estado) != null) {
+                         JsonNode transicoes = getTabelaTransicaoEstadoEntrada(estado, entrada.asText());
+                        if (transicoes != null) {
+                            transicoes.forEach(estadoTransicao -> {
+                                listaTransicoes.add(estadoTransicao.asText());
+                            });
+                        }
                     }
                 });
-                        
+
                 List<String> listaTransicoesVazio = new ArrayList<>(listaTransicoes);
                 listaTransicoesVazio.forEach(estadoInterno -> {
-                    JsonNode transicaoVazia = matriz.get(estadoInterno).get("ε");
-                    if (transicaoVazia != null) {
-                        transicaoVazia.forEach(estadoTransicaoVazia -> listaTransicoes.add(estadoTransicaoVazia.asText()));
+                    if (matriz.get(estadoInterno) != null) {
+                        JsonNode transicoesVazia  = getTabelaTransicaoEstadoEntrada(estadoInterno, "ε");
+                        if (transicoesVazia != null) {
+                            transicoesVazia.forEach(estadoTransicaoVazia -> listaTransicoes.add(estadoTransicaoVazia.asText()));
+                        }
                     }
                 });
                 lista = new ArrayList<>(listaTransicoes);
             }
-            if (estadoFinal.stream().anyMatch(estadoFinal -> lista.contains(estadoFinal))) {
+            if (estadoFinal.stream().anyMatch(estado -> lista.contains(estado))) {
                 aprovado.add(listaEntrada);
                 System.out.println("Aprovada -> " + listaEntrada);
             } else {
