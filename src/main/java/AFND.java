@@ -31,8 +31,6 @@ public class AFND {
 
     private ArrayList<JsonNode> rejeitado = new ArrayList<>();
 
-    private Map<String, List<JsonNode>> resultados = new HashMap<>();
-
     private String nome_afd;
 
     /**
@@ -46,7 +44,7 @@ public class AFND {
         getDadosJSON();
         setEstadoInicial();
         setEstadoFinal();
-        setTabelaTransicaoEstados();
+        carregaMatriz();
     }
 
      /**
@@ -104,15 +102,24 @@ public class AFND {
      * @return
      */
     private JsonNode getTabelaTransicaoEstadoEntrada(String nome, String entrada) {
-        //System.out.println("Recuperando matriz transicao para o estado e entrada");
-        return matriz.get(nome).get(entrada);
+        //System.out.println("Recuperando tabela de transicao para o estado:" + nome + " e entrada :" + entrada);
+        return getMatriz().get(nome).get(entrada);
+    }
+    
+    /**
+     * Recupera a matriz de transições de estado.
+     *
+     * @return
+     */
+    private JsonNode getMatriz() {
+        return matriz;
     }
 
     /**
-     * Carrega os transições de estado.
+     * Carrega a matriz de transições de estado.
      */
-    private void setTabelaTransicaoEstados() {
-        System.out.println("Recuperando a matriz de transicao");
+    private void carregaMatriz() {
+        System.out.println("Recuperando a matriz de transição");
         matriz = afndDados.get("matriz");
     }
 
@@ -120,27 +127,33 @@ public class AFND {
      * Avalia as entradas.
      */
     public void avaliar() {
-        System.out.println("Avaliando entradas");
-        for (JsonNode listaEntrada : entradas.get("entradas")) {
-            System.out.println("Entrada:" + listaEntrada);
+        System.out.println("\nAvaliando entradas");
+        //Percorre as entradas do arquivo entradas_X.json
+        for (JsonNode entrada : entradas.get("entradas")) {
+            System.out.println("Entrada:" + entrada);
 
-            //Avaliada cada caracter da entrada
-            for (JsonNode entrada : listaEntrada) {
+            //Avaliada cada token da entrada
+            for (JsonNode token : entrada) {
+                //Lista para guardar as transições realizadas
                 List<String> listaTransicoes = new ArrayList<>();
+                //Para cada estado da matriz
                 lista.forEach(estado -> {
-                    if (matriz.get(estado) != null) {
-                         JsonNode transicoes = getTabelaTransicaoEstadoEntrada(estado, entrada.asText());
+                    if (getMatriz().get(estado) != null) {
+                        //Recupera as transições do estado para o token de entrada
+                        JsonNode transicoes = getTabelaTransicaoEstadoEntrada(estado, token.asText());
                         if (transicoes != null) {
+                            //Guarda os estados para a entrada na lista
                             transicoes.forEach(estadoTransicao -> {
                                 listaTransicoes.add(estadoTransicao.asText());
                             });
                         }
                     }
                 });
-
+                //Analise transições vazias
                 List<String> listaTransicoesVazio = new ArrayList<>(listaTransicoes);
+                //Percorre os estados internos
                 listaTransicoesVazio.forEach(estadoInterno -> {
-                    if (matriz.get(estadoInterno) != null) {
+                    if (getMatriz().get(estadoInterno) != null) {
                         JsonNode transicoesVazia  = getTabelaTransicaoEstadoEntrada(estadoInterno, "ε");
                         if (transicoesVazia != null) {
                             transicoesVazia.forEach(estadoTransicaoVazia -> listaTransicoes.add(estadoTransicaoVazia.asText()));
@@ -149,28 +162,31 @@ public class AFND {
                 });
                 lista = new ArrayList<>(listaTransicoes);
             }
+            //Se o estado final estiver em algum estado da lista de transições
             if (estadosFinais.stream().anyMatch(estado -> lista.contains(estado))) {
-                aprovado.add(listaEntrada);
-                System.out.println("Aprovada -> " + listaEntrada);
+                aprovado.add(entrada);
+                System.out.println("Aprovada -> " + entrada);
             } else {
-                rejeitado.add(listaEntrada);
-                System.out.println("Rejeitada -> " + listaEntrada);
+                rejeitado.add(entrada);
+                System.out.println("Rejeitada -> " + entrada);
             }
             System.out.println("");
         }
+        //Salva os resultados
         salvaResultados();
     }
 
     /**
-     * Salva os resultados no arquivo 'resultados.json'.
+     * Salva os resultados no arquivo 'resultados_X.json'.
      */
     private void salvaResultados() {
+        Map<String, List<JsonNode>> resultados = new HashMap<>();
         resultados.put("Aprovado", aprovado);
         resultados.put("Rejeitado", rejeitado);
         System.out.println("Salvando o resultado em \"resultados_" + nome_afd + ".json\"");
         ObjectMapper objectMapper = new ObjectMapper();
         try {
-            objectMapper.writeValue(new File("resultados_" + nome_afd + ".json"), this.resultados);
+            objectMapper.writeValue(new File("resultados_" + nome_afd + ".json"), resultados);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
