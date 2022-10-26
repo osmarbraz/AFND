@@ -19,9 +19,9 @@ public class AFND {
 
     private JsonNode entradas;
 
-    private List<String> estadoInicial = new ArrayList<>();
+    private List<String> estadosIniciais = new ArrayList<>();
 
-    private List<String> estadoFinal = new ArrayList<>();
+    private List<String> estadosFinais = new ArrayList<>();
 
     private List<String> lista = new ArrayList<>();
 
@@ -49,6 +49,9 @@ public class AFND {
         setTabelaTransicaoEstados();
     }
 
+     /**
+     * Recupera os dados dos arquivos json.
+     */
     private void getDadosJSON() {
         System.out.println("Recuperando informacoes do arquivo \"afnd_" + nome_afd + ".json\"");
         ObjectMapper objectMapper = new ObjectMapper();
@@ -67,7 +70,7 @@ public class AFND {
         System.out.println("Definindo estado inicial");
         afndDados.get("estadoInicial").forEach(
                 estado -> {
-                    estadoInicial.add(estado.asText());
+                    estadosIniciais.add(estado.asText());
                     lista.add(estado.asText());
                 }
         );
@@ -79,7 +82,7 @@ public class AFND {
     private void setEstadoFinal() {
         System.out.println("Definindo o estado final");
         afndDados.get("estadoFinal").forEach(
-                estado -> estadoFinal.add(estado.asText())
+                estado -> estadosFinais.add(estado.asText())
         );
     }
 
@@ -146,7 +149,7 @@ public class AFND {
                 });
                 lista = new ArrayList<>(listaTransicoes);
             }
-            if (estadoFinal.stream().anyMatch(estado -> lista.contains(estado))) {
+            if (estadosFinais.stream().anyMatch(estado -> lista.contains(estado))) {
                 aprovado.add(listaEntrada);
                 System.out.println("Aprovada -> " + listaEntrada);
             } else {
